@@ -1,0 +1,31 @@
+{
+  "name": "toolquiz",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "prisma generate && npm run build -w client && npm run build -w server",
+    "typecheck": "npm run typecheck --workspaces",
+    "start": "node server/dist/index.js",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "tsx --test server/test/*.test.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "prettier": "^3.9.6",
+    "prisma": "6.19.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "dotenv": "^17.2.0"
+  },
+  "type": "module"
+}

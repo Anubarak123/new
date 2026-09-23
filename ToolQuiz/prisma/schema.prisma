@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+model Professor {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tools     Tool[]
+}
+
+model Tool {
+  id         String   @id @default(cuid())
+  name       String
+  logoPath   String?
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model QuizSettings {
+  id               Int      @id @default(1)
+  toolsPerQuiz     Int
+  timeLimitSeconds Int
+  updatedAt        DateTime @updatedAt
+}
+
+model Attempt {
+  id               String        @id @default(cuid())
+  studentName      String
+  tokenHash        String
+  semester         String
+  year             Int
+  categories       Json
+  startedAt        DateTime      @default(now())
+  expiresAt        DateTime
+  submittedAt      DateTime?
+  score            Int?
+  totalTools       Int
+  percentage       Float?
+  timeSpentSeconds Int?
+  status           AttemptStatus @default(IN_PROGRESS)
+  tools            AttemptTool[]
+
+  @@index([status, expiresAt])
+  @@index([studentName])
+  @@index([semester, year])
+  @@index([submittedAt])
+  @@index([score])
+}
+
+model AttemptTool {
+  id                   String   @id @default(cuid())
+  attemptId            String
+  attempt              Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  toolId               String?
+  toolName             String
+  toolLogoPath         String?
+  correctCategoryId    String?
+  correctCategoryName  String
+  selectedCategoryId   String?
+  selectedCategoryName String?
+  isCorrect            Boolean?
+  displayOrder         Int
+
+  @@unique([attemptId, toolId])
+}
