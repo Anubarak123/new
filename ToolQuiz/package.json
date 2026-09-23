@@ -11,21 +11,23 @@
     "typecheck": "npm run typecheck --workspaces",
     "start": "node server/dist/index.js",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test server/test/*.test.ts"
+    "test": "tsx --test server/test/*.test.ts",
+    "contract:emit": "prisma contract emit"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "@prisma/client": "^6.19.0",
+    "@types/node": "^26.6.2",
     "concurrently": "^9.2.0",
     "prettier": "^3.9.6",
-    "prisma": "6.19.0",
+    "prisma": "^6.19.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   },
   "dependencies": {
-    "@prisma/client": "6.19.0",
-    "dotenv": "^17.2.0"
+    "dotenv": "^17.4.2"
   },
   "type": "module"
 }

@@ -7,20 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum AttemptStatus {
-  IN_PROGRESS
-  SUBMITTED
-  EXPIRED
-}
-
 model Professor {
   id           String   @id @default(cuid())
+  name         String
   username     String   @unique
   passwordHash String
-  name         String
   createdAt    DateTime @default(now())
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Category {
   id        String   @id @default(cuid())
   name      String
@@ -31,12 +26,12 @@ model Category {
 
 model Tool {
   id         String   @id @default(cuid())
+  categoryId String
   name       String
   logoPath   String?
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  category   Category @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
 }
@@ -52,17 +47,17 @@ model Attempt {
   id               String        @id @default(cuid())
   studentName      String
   tokenHash        String
-  semester         String
-  year             Int
-  categories       Json
   startedAt        DateTime      @default(now())
   expiresAt        DateTime
   submittedAt      DateTime?
   score            Int?
   totalTools       Int
+  status           AttemptStatus @default(IN_PROGRESS)
+  semester         String
+  year             Int
+  categories       Json
   percentage       Float?
   timeSpentSeconds Int?
-  status           AttemptStatus @default(IN_PROGRESS)
   tools            AttemptTool[]
 
   @@index([status, expiresAt])
@@ -75,16 +70,22 @@ model Attempt {
 model AttemptTool {
   id                   String   @id @default(cuid())
   attemptId            String
-  attempt              Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   toolId               String?
+  displayOrder         Int
+  selectedCategoryId   String?
+  isCorrect            Boolean?
   toolName             String
   toolLogoPath         String?
   correctCategoryId    String?
   correctCategoryName  String
-  selectedCategoryId   String?
   selectedCategoryName String?
-  isCorrect            Boolean?
-  displayOrder         Int
+  attempt              Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@unique([attemptId, toolId])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
 }
