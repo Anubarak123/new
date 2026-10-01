@@ -487,6 +487,83 @@ app.get("/api/professor/results/export", async (req, res) => {
 app.get("/api/professor/results/:id", async (req, res) =>
   res.json(await attemptAction(req, "read")),
 );
+app.get("/api/professor/results/:id", async (req, res) =>
+  res.json(await attemptAction(req, "read")),
+);
+
+// Professor endpoint to upload and parse .xlsx tool/question file
+app.post(
+  "/api/professor/upload-tools",
+  upload.single("file"),
+  async (req, res, next) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Please upload an .xlsx file." });
+      }
+
+      // Validate file type on backend, do NOT trust frontend filter
+      const allowedMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const fileExtension = file.originalname.toLowerCase().split(".").pop();
+      if (fileExtension !== "xlsx" || file.mimetype !== allowedMime) {
+        return res.status(400).json({ message: "Only .xlsx Excel files are supported." });
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(file.buffer as any);
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) throw new Error("No worksheet found in uploaded file");
+
+      const successRows: number[] = [];
+      const failedRows: Array<{ row: number; error: string }> = [];
+      // Skip header row (row 1), start reading data from row 2
+      const rows = worksheet.getRows(2, worksheet.rowCount - 1);
+      if (!rows) throw new Error("Failed to read rows from sheet");
+      for (const row of rows) {
+        if (!row) continue;
+        const rowNumber = row.number;
+        try {
+          const name = row.getCell(1).value?.toString().trim();
+          const categoryId = row.getCell(2).value?.toString().trim();
+          const logoPath = row.getCell(3).value?.toString().trim() || null;
+
+          if (!name || !categoryId) {
+            throw new Error("Missing required name or categoryId");
+          }
+
+          await db.tool.create({
+            data: {
+              name,
+              categoryId,
+              logoPath,
+            },
+          });
+          successRows.push(rowNumber);
+        } catch (err) {
+          failedRows.push({
+            row: rowNumber,
+            error: err instanceof Error ? err.message : "Unknown parsing error",
+          });
+        }
+      }
+
+      return res.json({
+        totalRows: worksheet.rowCount - 1,
+        successCount: successRows.length,
+        failedCount: failedRows.length,
+        failedRows,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+
+app.use("/api", (_req, res) =>
+  res.status(404).json({ error: "Endpoint not found." }),
+);
+
 app.use("/api", (_req, res) =>
   res.status(404).json({ error: "Endpoint not found." }),
 );
@@ -496,6 +573,7 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(path.resolve("client/dist/index.html")),
   );
 }
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof z.ZodError)
     return res

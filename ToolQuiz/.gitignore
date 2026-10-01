@@ -1,3 +1,14 @@
 node_modules/
 dist/
 .env
+# logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
