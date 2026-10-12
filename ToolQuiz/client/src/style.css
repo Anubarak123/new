@@ -703,3 +703,31 @@ td {
     flex-wrap: wrap;
   }
 }
+.upload-card {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+}
+.upload-card summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #2b6cb0;
+}
+.upload-card summary:hover {
+  text-decoration: underline;
+}
+.upload-card form {
+  margin-top: 0.75rem;
+}
+.upload-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: #f0f7ff;
+  border: 1px solid #b7d6f5;
+}
+.upload-result ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: #a03030;
+  font-size: 0.9rem;
+}

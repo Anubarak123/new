@@ -341,6 +341,91 @@ function Dashboard() {
     </>
   );
 }
+function ExcelUpload() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{
+    totalRows: number;
+    successCount: number;
+    failedCount: number;
+    failedRows: Array<{ row: number; error: string }>;
+  } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const file = fileRef.current?.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      setError("Please choose an .xlsx Excel file.");
+      return;
+    }
+    const f = new FormData();
+    f.append("file", file);
+    setBusy(true);
+    setError("");
+    setResult(null);
+    try {
+      const r = await api<{
+        totalRows: number;
+        successCount: number;
+        failedCount: number;
+        failedRows: Array<{ row: number; error: string }>;
+      }>("/professor/upload-tools", "POST", f);
+      setResult(r);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <details className="card upload-card">
+      <summary>Bulk Import Tools from Excel</summary>
+      <form onSubmit={save}>
+        <fieldset disabled={busy}>
+          <label>
+            Excel file (.xlsx)
+            <input
+              ref={fileRef}
+              name="file"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              required
+            />
+          </label>
+          <p className="muted">
+            Column 1 = tool name, Column 2 = category name. Categories are
+            created automatically if missing.
+          </p>
+          <div className="actions">
+            <button>{busy ? "Importing…" : "Import"}</button>
+          </div>
+        </fieldset>
+      </form>
+      <ErrorBox message={error} />
+      {result && (
+        <div className="upload-result">
+          <p>
+            <strong>{result.successCount}</strong> imported,{" "}
+            <strong>{result.failedCount}</strong> failed (of {result.totalRows}{" "}
+            rows).
+          </p>
+          {result.failedRows.length > 0 && (
+            <ul>
+              {result.failedRows.map((fr) => (
+                <li key={fr.row}>
+                  Row {fr.row}: {fr.error}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </details>
+  );
+}
 function Library({ kind }: { kind: "tools" | "categories" }) {
   const { data, setData, error, setError } = useLoad<(Tool & Category)[]>(
     `/professor/${kind}`,
@@ -369,6 +454,7 @@ function Library({ kind }: { kind: "tools" | "categories" }) {
           + Add {tools ? "Tool" : "Category"}
         </Link>
       </div>
+      {tools && <ExcelUpload />}
       <ErrorBox message={error} />
       <section className="card table-wrap">
         {!data ? (
@@ -988,7 +1074,6 @@ function Play() {
     </>
   );
 }
-
 function ResultDetail({ a }: { a: Attempt }) {
   return (
     <>
