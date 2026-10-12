@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { requireProfessor } from "./auth.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -161,6 +162,19 @@ const upload = multer({
   fileFilter: (_req, file, cb) => {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.mimetype))
       return cb(new HttpError(400, "Upload a PNG, JPEG, or WebP image."));
+    cb(null, true);
+  },
+});
+// Multer instance that accepts .xlsx files for the bulk tools import endpoint.
+const uploadXlsx = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 4 },
+  fileFilter: (_req, file, cb) => {
+    if (
+      file.mimetype !==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+      return cb(new HttpError(400, "Upload an .xlsx Excel file."));
     cb(null, true);
   },
 });
@@ -490,30 +504,20 @@ app.get("/api/professor/results/:id", async (req, res) =>
 app.get("/api/professor/results/:id", async (req, res) =>
   res.json(await attemptAction(req, "read")),
 );
-
-// Professor endpoint to upload and parse .xlsx tool/question file
+// Bulk import tools from an .xlsx file. Column 1 = tool name, column 2 = category name.
 app.post(
   "/api/professor/upload-tools",
-  upload.single("file"),
+  uploadXlsx.single("file"),
   async (req, res, next) => {
     try {
       const file = req.file;
       if (!file) {
         return res.status(400).json({ message: "Please upload an .xlsx file." });
       }
-
-      // Validate file type on backend, do NOT trust frontend filter
-      const allowedMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-      const fileExtension = file.originalname.toLowerCase().split(".").pop();
-      if (fileExtension !== "xlsx" || file.mimetype !== allowedMime) {
-        return res.status(400).json({ message: "Only .xlsx Excel files are supported." });
-      }
-
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(file.buffer as any);
       const worksheet = workbook.worksheets[0];
       if (!worksheet) throw new Error("No worksheet found in uploaded file");
-
       const successRows: number[] = [];
       const failedRows: Array<{ row: number; error: string }> = [];
       // Skip header row (row 1), start reading data from row 2
@@ -523,19 +527,24 @@ app.post(
         if (!row) continue;
         const rowNumber = row.number;
         try {
-          const name = row.getCell(1).value?.toString().trim();
-          const categoryId = row.getCell(2).value?.toString().trim();
-          const logoPath = row.getCell(3).value?.toString().trim() || null;
-
-          if (!name || !categoryId) {
-            throw new Error("Missing required name or categoryId");
+          const toolName = row.getCell(1).value?.toString().trim();
+          const categoryName = row.getCell(2).value?.toString().trim();
+          if (!toolName || !categoryName) {
+            throw new Error("Missing tool name or category name");
           }
-
+          // Find category by name (case-insensitive), create it if missing
+          let category = await db.category.findFirst({
+            where: { name: { equals: categoryName, mode: "insensitive" } },
+          });
+          if (!category) {
+            category = await db.category.create({
+              data: { name: categoryName },
+            });
+          }
           await db.tool.create({
             data: {
-              name,
-              categoryId,
-              logoPath,
+              name: toolName,
+              categoryId: category.id,
             },
           });
           successRows.push(rowNumber);
@@ -546,7 +555,6 @@ app.post(
           });
         }
       }
-
       return res.json({
         totalRows: worksheet.rowCount - 1,
         successCount: successRows.length,
@@ -558,12 +566,9 @@ app.post(
     }
   }
 );
-
-
 app.use("/api", (_req, res) =>
   res.status(404).json({ error: "Endpoint not found." }),
 );
-
 app.use("/api", (_req, res) =>
   res.status(404).json({ error: "Endpoint not found." }),
 );
@@ -573,7 +578,20 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(path.resolve("client/dist/index.html")),
   );
 }
-
+// Get all categories and tools for professor dashboard
+app.get("/api/professor/tools", requireProfessor, async (_req, res, next) => {
+  try {
+    const categories = await db.category.findMany({
+      include: {
+        tools: true
+      },
+      orderBy: { name: "asc" }
+    });
+    return res.json({ categories });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof z.ZodError)
     return res
