@@ -279,6 +279,14 @@ app.post(
           "The quiz is unavailable. The Professor must configure a positive time limit and enough tools.",
         );
       const tools = await tx.tool.findMany({ include: { category: true } });
+      // Keep only the first occurrence of each tool name so a quiz never repeats a tool.
+      const seenNames = new Set<string>();
+      const uniqueTools = tools.filter((tool) => {
+        const key = tool.name.toLowerCase();
+        if (seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+      });
       const categories = await tx.category.findMany({
         select: { id: true, name: true },
         orderBy: { name: "asc" },
@@ -296,7 +304,7 @@ app.post(
           totalTools: config.toolsPerQuiz!,
           categories,
           tools: {
-            create: sample(tools, config.toolsPerQuiz!).map(
+            create: sample(uniqueTools, config.toolsPerQuiz!).map(
               (t, displayOrder) => ({
                 toolId: t.id,
                 toolName: t.name,
