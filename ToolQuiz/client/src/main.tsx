@@ -347,6 +347,7 @@ function ExcelUpload() {
   const [result, setResult] = useState<{
     totalRows: number;
     successCount: number;
+    skippedCount?: number;
     failedCount: number;
     failedRows: Array<{ row: number; error: string }>;
   } | null>(null);
@@ -409,6 +410,7 @@ function ExcelUpload() {
         <div className="upload-result">
           <p>
             <strong>{result.successCount}</strong> imported,{" "}
+            <strong>{result.skippedCount ?? 0}</strong> skipped,{" "}
             <strong>{result.failedCount}</strong> failed (of {result.totalRows}{" "}
             rows).
           </p>
