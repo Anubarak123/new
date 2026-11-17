@@ -308,13 +308,9 @@ function Dashboard() {
       <p>Manage the library and the quiz. See how your students did.</p>
       <div className="dashboard-grid">
         {[
-          ["Add Tool", "tools/new", "Grow your digital tool library."],
+      
           ["All Tools", "tools", "Browse, edit, and organize tools."],
-          [
-            "Add Category",
-            "categories/new",
-            "Create a place for tools to belong.",
-          ],
+          
           ["All Categories", "categories", "Manage your category names."],
           [
             "Quiz Settings",
