@@ -1,3 +1,25 @@
+# Verification — November 17, 2026
+
+## Automated checks
+
+- `npx tsc --noEmit` in `server` and `client`: no type errors.
+- `npm test`: three PostgreSQL integration tests pass (3 pass, 0 fail, 35 s).
+- `npm run build`: Prisma client generation, Vite production bundle, and Express compilation succeed.
+
+## Library behavior
+
+- Sampling deduplication: the library holds 28 tools with no repeated names; five consecutive quiz starts each returned 18 unique tools with no duplicates.
+- Bulk import deduplication: a 7-row workbook produced 0 imported / 5 skipped / 2 failed, and the row `testtool alpha` was rejected because `TestTool Alpha` already existed.
+- Professor dashboard: the landing page shows the four main entries (All Tools, All Categories, Quiz Settings, Results), while the add-tool and add-category routes remain reachable from inside their pages.
+
+## Fixes verified after code review
+
+- Duplicate route registrations removed; the integration suite confirms every endpoint still responds.
+- Single-tool name uniqueness returns 409 with "A tool with this name already exists." both when creating an existing name and when renaming a tool to an existing name.
+- Editing a tool without renaming still succeeds, confirming the update check excludes its own record.
+- Library integrity after the checks: 28 tools, 12 categories, one `Zoom`.
+
+
 # Verification — September 10, 2026
 
 ## Passed automated checks

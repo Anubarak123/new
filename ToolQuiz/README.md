@@ -23,7 +23,7 @@ Open the Vite URL shown in the terminal (normally http://localhost:5173). Vite f
 
 The optional, idempotent seed creates:
 
-- **Development only:** username `professor`, password `professor123`.
+- **Development only:** set `PROFESSOR_USERNAME` and `PROFESSOR_PASSWORD` in `.env` before seeding.
 - Communication: Zoom, Microsoft Teams, Google Meet.
 - Storage: OneDrive, Dropbox, Google Drive.
 - Learning Management: Blackboard, Canvas, Moodle.
@@ -115,11 +115,11 @@ The integration suite uses a randomly named temporary schema in the configured P
 
 Deploy the repository as one Node Web Service backed by PostgreSQL:
 
-- Build: `npm ci && npm run build`
+- Build: `npm ci --include=dev && npm run build`
 - Start: `npx prisma migrate deploy && npm start`
 - Set `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, `CLIENT_URL` to the service origin, and `TRUST_PROXY_HOPS=1`.
 - Health check: `/api/health`.
-- Run the seed only if desired, with a strong configured Professor password. The development defaults are not production credentials.
+- Run the seed once after the first deploy, with `PROFESSOR_PASSWORD` set to a strong password. It creates the Professor account and the sample library.    
 
 Express binds to `0.0.0.0`, honors the platform's port, serves the REST API and `client/dist`, and falls back to the SPA for deep links. No separate frontend hosting is required. Resolve the upload persistence limitation above before relying on deployed logos.
 

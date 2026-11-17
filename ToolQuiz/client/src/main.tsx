@@ -926,6 +926,7 @@ function Play() {
       );
     } catch (e) {
       setError((e as Error).message);
+      await refresh().catch(() => {});
     } finally {
       inFlight.current = false;
       setBusy(false);

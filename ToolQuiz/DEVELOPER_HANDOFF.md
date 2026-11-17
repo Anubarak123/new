@@ -153,7 +153,7 @@ npm run db:seed
 npm run dev
 ```
 
-Skip Docker if using an existing PostgreSQL server. The optional seed defaults to the development account `professor` / `professor123`, nine tools, three categories, six tools per quiz, and 180 seconds on a fresh database. Set custom seed account variables before seeding. Re-seeding does not reset an existing Professor password and preserves settings for a nonempty library, but can add missing sample tools/categories.
+Skip Docker if using an existing PostgreSQL server. The seed reads `PROFESSOR_USERNAME` and `PROFESSOR_PASSWORD` from the environment and creates nine tools, three categories, six tools per quiz, and 180 seconds on a fresh database. Re-seeding does not reset an existing Professor password and preserves settings for a nonempty library, but can add missing sample tools/categories.
 
 Open the Vite URL, normally `http://localhost:5173`. Use the Professor area to inspect the library/settings, then start a Student attempt, assign tools, refresh, and submit. Verify the result in the Professor area and export Excel.
 
