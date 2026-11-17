@@ -527,6 +527,8 @@ app.post(
       const worksheet = workbook.worksheets[0];
       if (!worksheet) throw new Error("No worksheet found in uploaded file");
       const successRows: number[] = [];
+      const skippedRows: number[] = [];
+
       const failedRows: Array<{ row: number; error: string }> = [];
       // Skip header row (row 1), start reading data from row 2
       const rows = worksheet.getRows(2, worksheet.rowCount - 1);
@@ -549,13 +551,22 @@ app.post(
               data: { name: categoryName },
             });
           }
-          await db.tool.create({
-            data: {
-              name: toolName,
-              categoryId: category.id,
-            },
+                    // Skip tools that already exist anywhere in the library (case-insensitive).
+          const existing = await db.tool.findFirst({
+            where: { name: { equals: toolName, mode: "insensitive" } },
           });
-          successRows.push(rowNumber);
+          if (existing) {
+            skippedRows.push(rowNumber);
+          } else {
+            await db.tool.create({
+              data: {
+                name: toolName,
+                categoryId: category.id,
+              },
+            });
+            successRows.push(rowNumber);
+          }
+
         } catch (err) {
           failedRows.push({
             row: rowNumber,
@@ -566,6 +577,8 @@ app.post(
       return res.json({
         totalRows: worksheet.rowCount - 1,
         successCount: successRows.length,
+        skippedCount: skippedRows.length,
+        skippedRows,
         failedCount: failedRows.length,
         failedRows,
       });
