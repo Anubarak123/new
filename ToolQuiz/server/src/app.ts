@@ -201,7 +201,7 @@ for (const method of ["post", "put"] as const)
             !(await tx.tool.findUnique({ where: { id: id(req) } }))
           )
             throw new HttpError(404, "Tool not found.");
-                      const duplicate = await tx.tool.findFirst({
+          const duplicate = await tx.tool.findFirst({
             where: {
               name: { equals: input.name, mode: "insensitive" },
               ...(method === "put" ? { id: { not: id(req) } } : {}),

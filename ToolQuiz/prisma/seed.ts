@@ -8,7 +8,6 @@ try {
   const password = process.env.PROFESSOR_PASSWORD;
   if (!password)
     throw new Error("Set PROFESSOR_PASSWORD before seeding.");
-  
   await db.professor.upsert({
     where: { username },
     update: {},
