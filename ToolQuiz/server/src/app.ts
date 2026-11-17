@@ -201,6 +201,15 @@ for (const method of ["post", "put"] as const)
             !(await tx.tool.findUnique({ where: { id: id(req) } }))
           )
             throw new HttpError(404, "Tool not found.");
+                      const duplicate = await tx.tool.findFirst({
+            where: {
+              name: { equals: input.name, mode: "insensitive" },
+              ...(method === "put" ? { id: { not: id(req) } } : {}),
+            },
+          });
+          if (duplicate)
+            throw new HttpError(409, "A tool with this name already exists.");
+
           const logoPath = req.file
             ? await logoStorage.save(req.file)
             : input.removeLogo === "true"
@@ -509,9 +518,7 @@ app.get("/api/professor/results/export", async (req, res) => {
 app.get("/api/professor/results/:id", async (req, res) =>
   res.json(await attemptAction(req, "read")),
 );
-app.get("/api/professor/results/:id", async (req, res) =>
-  res.json(await attemptAction(req, "read")),
-);
+
 // Bulk import tools from an .xlsx file. Column 1 = tool name, column 2 = category name.
 app.post(
   "/api/professor/upload-tools",
@@ -590,29 +597,13 @@ app.post(
 app.use("/api", (_req, res) =>
   res.status(404).json({ error: "Endpoint not found." }),
 );
-app.use("/api", (_req, res) =>
-  res.status(404).json({ error: "Endpoint not found." }),
-);
+
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.resolve("client/dist")));
   app.get("/{*path}", (_req, res) =>
     res.sendFile(path.resolve("client/dist/index.html")),
   );
 }
-// Get all categories and tools for professor dashboard
-app.get("/api/professor/tools", requireProfessor, async (_req, res, next) => {
-  try {
-    const categories = await db.category.findMany({
-      include: {
-        tools: true
-      },
-      orderBy: { name: "asc" }
-    });
-    return res.json({ categories });
-  } catch (err) {
-    next(err);
-  }
-});
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof z.ZodError)
     return res

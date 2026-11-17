@@ -5,14 +5,10 @@ const db = new PrismaClient();
 try {
   const initiallyEmpty = (await db.tool.count()) === 0;
   const username = process.env.PROFESSOR_USERNAME || "professor";
-  const password = process.env.PROFESSOR_PASSWORD || "professor123";
-  if (
-    process.env.NODE_ENV === "production" &&
-    (!process.env.PROFESSOR_PASSWORD || password === "professor123")
-  )
-    throw new Error(
-      "Set a strong PROFESSOR_PASSWORD before seeding production.",
-    );
+  const password = process.env.PROFESSOR_PASSWORD;
+  if (!password)
+    throw new Error("Set PROFESSOR_PASSWORD before seeding.");
+  
   await db.professor.upsert({
     where: { username },
     update: {},
@@ -47,8 +43,9 @@ try {
     create: { id: 1, toolsPerQuiz: 6, timeLimitSeconds: 180 },
   });
   console.log(
-    "Professor and sample library ready. Existing passwords and configured nonempty libraries were preserved. Default credentials are DEVELOPMENT ONLY.",
+    "Professor and sample library ready. Existing passwords and configured nonempty libraries were preserved.",
   );
+
 } finally {
   await db.$disconnect();
 }
