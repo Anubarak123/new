@@ -824,3 +824,20 @@ td {
 .submit-bar {
   padding: 8px 0;
 }
+/* Let dragged cards float above the category grid */
+.tool-rail {
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+  max-height: none;
+  overflow: visible;
+}
+
+.sorting-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.tool {
+  position: relative;
+}
