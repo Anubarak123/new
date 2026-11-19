@@ -549,14 +549,6 @@ app.post(
             throw new Error("Missing tool name or category name");
           }
           // Find category by name (case-insensitive), create it if missing
-          let category = await db.category.findFirst({
-            where: { name: { equals: categoryName, mode: "insensitive" } },
-          });
-          if (!category) {
-            category = await db.category.create({
-              data: { name: categoryName },
-            });
-          }
                     // Skip tools that already exist anywhere in the library (case-insensitive).
           const existing = await db.tool.findFirst({
             where: { name: { equals: toolName, mode: "insensitive" } },
@@ -564,6 +556,16 @@ app.post(
           if (existing) {
             skippedRows.push(rowNumber);
           } else {
+            // Create the category only for rows that actually insert a tool,
+            // so skipped rows never leave an empty category behind.
+            let category = await db.category.findFirst({
+              where: { name: { equals: categoryName, mode: "insensitive" } },
+            });
+            if (!category) {
+              category = await db.category.create({
+                data: { name: categoryName },
+              });
+            }
             await db.tool.create({
               data: {
                 name: toolName,
