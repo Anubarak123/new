@@ -804,15 +804,21 @@ function Join() {
 function Zone({
   id,
   title,
+  className,
   children,
 }: {
   id: string;
   title: string;
+  className?: string;
   children: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <section ref={setNodeRef} className={`zone ${isOver ? "over" : ""}`}>
+    <section
+      ref={setNodeRef}
+      className={`zone ${className ?? ""} ${isOver ? "over" : ""}`}
+    >
+
       <h2>{title}</h2>
       <div className="zone-items">{children}</div>
       <span className="drop-hint">Drop tools here</span>
@@ -821,14 +827,10 @@ function Zone({
 }
 function ToolCard({
   tool,
-  categories,
   disabled,
-  move,
 }: {
   tool: Tool;
-  categories: Category[];
   disabled: boolean;
-  move: (id: string, category: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: tool.id,
@@ -856,22 +858,10 @@ function ToolCard({
       >
         <Logo path={tool.logoPath} /> <span>⠿</span> {tool.name}
       </button>
-      <select
-        aria-label={`Category for ${tool.name}`}
-        disabled={disabled}
-        value={tool.selectedCategoryId || ""}
-        onChange={(e) => move(tool.id, e.target.value || null)}
-      >
-        <option value="">Unsorted</option>
-        {categories.map((c) => (
-          <option value={c.id} key={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }
+
 function Play() {
   const { attemptId } = useParams();
   const nav = useNavigate();
@@ -981,7 +971,7 @@ function Play() {
   const disabled = busy || remaining === 0;
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading quiz-heading">
         <div>
           <p className="eyebrow">LET’S PUT THINGS IN PLACE · {a.studentName}</p>
           <h1>Digital Tools Quiz</h1>
@@ -1008,9 +998,7 @@ function Play() {
               : "All changes saved"}
         </span>
       </div>
-      <p className="muted">
-        Drag a tool into a category, or use its category menu.
-      </p>
+     
       <DndContext
         sensors={sensors}
         onDragEnd={({ active, over }) => {
@@ -1021,36 +1009,27 @@ function Play() {
             );
         }}
       >
-        <Zone id="unsorted" title="Available tools">
-          {a.tools
-            .filter((t) => !t.selectedCategoryId)
-            .map((t) => (
-              <ToolCard
-                key={t.id}
-                tool={t}
-                categories={a.categories}
-                disabled={disabled}
-                move={move}
-              />
+                <div className="quiz-layout">
+          <Zone id="unsorted" title="Available tools" className="tool-rail">
+            {a.tools
+              .filter((t) => !t.selectedCategoryId)
+              .map((t) => (
+                <ToolCard key={t.id} tool={t} disabled={disabled} />
+              ))}
+          </Zone>
+          <div className="sorting-grid">
+            {a.categories.map((c) => (
+              <Zone key={c.id} id={c.id} title={c.name}>
+                {a.tools
+                  .filter((t) => t.selectedCategoryId === c.id)
+                  .map((t) => (
+                    <ToolCard key={t.id} tool={t} disabled={disabled} />
+                  ))}
+              </Zone>
             ))}
-        </Zone>
-        <div className="sorting-grid">
-          {a.categories.map((c) => (
-            <Zone key={c.id} id={c.id} title={c.name}>
-              {a.tools
-                .filter((t) => t.selectedCategoryId === c.id)
-                .map((t) => (
-                  <ToolCard
-                    key={t.id}
-                    tool={t}
-                    categories={a.categories}
-                    disabled={disabled}
-                    move={move}
-                  />
-                ))}
-            </Zone>
-          ))}
+          </div>
         </div>
+
       </DndContext>
       <div className="submit-bar">
         <p>You can move tools until you submit or time runs out.</p>

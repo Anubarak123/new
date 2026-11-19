@@ -731,3 +731,96 @@ td {
   color: #a03030;
   font-size: 0.9rem;
 }
+/* ---------- Compact quiz view: keep the whole board on one screen ---------- */
+
+.quiz-heading .eyebrow {
+  margin: 0 0 2px;
+}
+
+.quiz-heading h1 {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 0 0 4px;
+}
+
+.quiz-heading .instructions {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.quiz-heading .timer {
+  padding: 6px 10px;
+  margin-top: 6px;
+}
+
+/* Left rail + right category grid */
+.quiz-layout {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+/* Unsorted tools: single vertical column, always visible at the far left */
+.tool-rail {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.tool-rail .zone-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-rail .zone-items .tool {
+  width: 100%;
+}
+
+.tool-rail .tool .drag-handle {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+/* Category grid: shorter tiles, scrolls inside its own box */
+.sorting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.sorting-grid .zone {
+  min-height: 120px;
+  padding: 8px;
+}
+
+.sorting-grid .zone h2 {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.sorting-grid .tool {
+  width: 100%;
+}
+
+.sorting-grid .tool .drag-handle {
+  padding: 5px 7px;
+  font-size: 12.5px;
+}
+
+.sorting-grid .zone-items {
+  gap: 5px;
+}
+
+.submit-bar {
+  padding: 8px 0;
+}
