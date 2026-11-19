@@ -841,3 +841,22 @@ td {
 .tool {
   position: relative;
 }
+/* Drag overlay: the floating card follows the pointer, the source stays put */
+.tool-rail {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.tool.is-dragging {
+  opacity: 0.35;
+}
+
+.tool-overlay {
+  width: 208px;
+  cursor: grabbing;
+  border-color: #a8c19a;
+  box-shadow: 0 12px 28px rgba(32, 48, 45, 0.22);
+}

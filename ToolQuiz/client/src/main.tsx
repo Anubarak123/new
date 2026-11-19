@@ -18,6 +18,7 @@ import {
 } from "react-router-dom";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   KeyboardSensor,
   useSensor,
@@ -821,27 +822,31 @@ function Zone({
 
       <h2>{title}</h2>
       <div className="zone-items">{children}</div>
-      <span className="drop-hint">Drop tools here</span>
+      
     </section>
   );
 }
 function ToolCard({
   tool,
   disabled,
+  dragging,
 }: {
   tool: Tool;
   disabled: boolean;
+  dragging?: boolean;
 }) {
+
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: tool.id,
     disabled,
   });
   return (
-    <div
+        <div
       ref={setNodeRef}
-      className="tool"
+      className={`tool${dragging ? " is-dragging" : ""}`}
       style={
-        transform
+        !dragging && transform
+
           ? {
               transform: `translate3d(${transform.x}px,${transform.y}px,0)`,
               zIndex: 10,
@@ -869,6 +874,7 @@ function Play() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [activeId, setActiveId] = useState<string | null>(null);
   const offset = useRef(0);
   const inFlight = useRef(false);
   const sensors = useSensors(
@@ -969,6 +975,7 @@ function Play() {
       </>
     );
   const disabled = busy || remaining === 0;
+  const activeTool = a.tools.find((t) => t.id === activeId) ?? null; 
   return (
     <>
       <div className="page-heading quiz-heading">
@@ -999,22 +1006,27 @@ function Play() {
         </span>
       </div>
      
-      <DndContext
+            <DndContext
         sensors={sensors}
+        onDragStart={({ active }) => setActiveId(String(active.id))}
         onDragEnd={({ active, over }) => {
+          setActiveId(null);
           if (over)
             void move(
               String(active.id),
               over.id === "unsorted" ? null : String(over.id),
             );
         }}
+        onDragCancel={() => setActiveId(null)}
       >
+
                 <div className="quiz-layout">
           <Zone id="unsorted" title="Available tools" className="tool-rail">
             {a.tools
               .filter((t) => !t.selectedCategoryId)
               .map((t) => (
-                <ToolCard key={t.id} tool={t} disabled={disabled} />
+                <ToolCard key={t.id} tool={t} disabled={disabled} dragging={t.id === activeId} />
+
               ))}
           </Zone>
           <div className="sorting-grid">
@@ -1023,13 +1035,21 @@ function Play() {
                 {a.tools
                   .filter((t) => t.selectedCategoryId === c.id)
                   .map((t) => (
-                    <ToolCard key={t.id} tool={t} disabled={disabled} />
+                    <ToolCard key={t.id} tool={t} disabled={disabled} dragging={t.id === activeId} />
+
                   ))}
               </Zone>
             ))}
           </div>
         </div>
-
+<DragOverlay dropAnimation={null}>
+          {activeTool ? (
+            <div className="tool tool-overlay">
+              <Logo path={activeTool.logoPath} /> <span>⠿</span>{" "}
+              {activeTool.name}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
       <div className="submit-bar">
         <p>You can move tools until you submit or time runs out.</p>
