@@ -90,13 +90,10 @@ async function api<T = any>(
   const data = await res.json().catch(() => {
     throw new Error("The server is unavailable. Please try again.");
   });
-  if (!res.ok) {
-    if (res.status === 401 && url.startsWith("/professor")) {
-      localStorage.removeItem("professor-token");
-      window.location.assign("/professor/login");
-    }
+    if (!res.ok) {
     throw new Error(data.error || "Request failed.");
   }
+
   return data;
 }
 const duration = (seconds: number | null) =>
@@ -152,9 +149,15 @@ function Protected() {
     return <Navigate to="/professor/login" replace />;
   return data ? (
     <Outlet />
-  ) : error ? (
-    <ErrorBox message={error} />
+    ) : error ? (
+    <>
+      <ErrorBox message={error} />
+      <p>
+        <Link to="/professor/login">Go to professor login →</Link>
+      </p>
+    </>
   ) : (
+
     <p>Checking your session…</p>
   );
 }
@@ -196,6 +199,8 @@ function Shell() {
               element={<RecordForm kind="categories" />}
             />
             <Route path="/professor/settings" element={<QuizSettings />} />
+                        <Route path="/professor/password" element={<ChangePassword />} />
+
             <Route path="/professor/results" element={<Results />} />
             <Route
               path="/professor/results/:attemptId"
@@ -326,6 +331,14 @@ function Dashboard() {
           </Link>
         ))}
       </div>
+           <p>
+        <Link to="/student">Try the quiz as a student →</Link>
+      </p>
+      <p>
+        <Link to="/professor/password">Change your password →</Link>
+      </p>
+
+
       <button
         className="secondary"
         onClick={() => {
@@ -347,6 +360,7 @@ function ExcelUpload() {
     skippedCount?: number;
     failedCount: number;
     failedRows: Array<{ row: number; error: string }>;
+    removedCategories?: string[];
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -369,6 +383,7 @@ function ExcelUpload() {
         successCount: number;
         failedCount: number;
         failedRows: Array<{ row: number; error: string }>;
+        removedCategories?: string[];
       }>("/professor/upload-tools", "POST", f);
       setResult(r);
     } catch (e) {
@@ -410,8 +425,16 @@ function ExcelUpload() {
             <strong>{result.skippedCount ?? 0}</strong> skipped,{" "}
             <strong>{result.failedCount}</strong> failed (of {result.totalRows}{" "}
             rows).
+                  </p>
+        {result.removedCategories && result.removedCategories.length > 0 && (
+          <p className="muted">
+            Removed {result.removedCategories.length} empty{" "}
+            {result.removedCategories.length === 1 ? "category" : "categories"}
+            : {result.removedCategories.join(", ")}.
           </p>
-          {result.failedRows.length > 0 && (
+        )}
+        {result.failedRows.length > 0 && (
+
             <ul>
               {result.failedRows.map((fr) => (
                 <li key={fr.row}>
@@ -722,6 +745,72 @@ function QuizSettings() {
     </>
   );
 }
+function ChangePassword() {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    setBusy(true);
+    setError("");
+    setDone(false);
+    try {
+      await api("/professor/password", "PUT", {
+        currentPassword: f.get("currentPassword"),
+        newPassword: f.get("newPassword"),
+      });
+      form.reset();
+      setDone(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Back />
+      <section className="card narrow">
+        <h1>Change Your Password</h1>
+        <ErrorBox message={error} />
+        {done && <p className="hint">Your password has been updated.</p>}
+        <form onSubmit={save}>
+          <fieldset disabled={busy}>
+            <label>
+              Current password
+              <input
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={200}
+              />
+            </label>
+            <label>
+              New password
+              <input
+                name="newPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={200}
+              />
+            </label>
+            <p className="muted">At least 8 characters.</p>
+            <div className="actions">
+              <button>{busy ? "Saving…" : "Update Password"}</button>
+              <Link to="/professor">Cancel</Link>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+    </>
+  );
+}
+
 function Join() {
   const { data, error, setError } = useLoad<Settings>("/student");
   const nav = useNavigate();
@@ -748,6 +837,12 @@ function Join() {
   }
   return (
     <section className="card narrow">
+            {localStorage.getItem("professor-token") && (
+        <Link className="back" to="/professor">
+          ← Back to Professor Dashboard
+        </Link>
+      )}
+
       <p className="eyebrow">READY, SET, SORT</p>
       <h1>Digital Tools Quiz</h1>
       <ErrorBox message={error} />
@@ -993,10 +1088,7 @@ function Play() {
       </div>
       <ErrorBox message={error} />
       <div className="sorting-meta">
-        <span>
-          {a.tools.filter((t) => t.selectedCategoryId).length} of {a.totalTools}{" "}
-          tools sorted
-        </span>
+         
         <span role="status">
           {busy
             ? "Saving…"
@@ -1005,7 +1097,19 @@ function Play() {
               : "All changes saved"}
         </span>
       </div>
-     
+           <div className="sort-progress" aria-hidden="true">
+        <span
+          className="sort-progress-fill"
+          style={{
+            width: `${Math.round(
+              (a.tools.filter((t) => t.selectedCategoryId).length /
+                Math.max(1, a.totalTools)) *
+                100,
+            )}%`,
+          }}
+        />
+      </div>
+
             <DndContext
         sensors={sensors}
         onDragStart={({ active }) => setActiveId(String(active.id))}
