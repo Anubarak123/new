@@ -55,16 +55,16 @@ async function professor(req: Request) {
       secret!,
       { algorithms: ["HS256"] },
     ) as jwt.JwtPayload;
-    if (
-      payload.role !== "professor" ||
-      typeof payload.sub !== "string" ||
-      !(await db.professor.findUnique({ where: { id: payload.sub } }))
-    )
+    if (payload.role !== "professor" || typeof payload.sub !== "string")
       throw new Error();
+    const p = await db.professor.findUnique({ where: { id: payload.sub } });
+    if (!p) throw new Error();
+    return p;
   } catch {
     throw new HttpError(401, "Please log in.");
   }
 }
+
 // All library mutations/settings/start operations share one lock for a consistent quiz snapshot.
 async function library<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
   return db.$transaction(async (tx) => {
@@ -91,7 +91,7 @@ app.post(
     res.json({
       token: jwt.sign({ role: "professor" }, secret!, {
         subject: p.id,
-        expiresIn: "8h",
+        expiresIn: "7d",
       }),
       name: p.name,
     });
@@ -102,6 +102,28 @@ app.use("/api/professor", async (req, _res, next) => {
   next();
 });
 app.get("/api/professor/session", (_req, res) => res.json({ ok: true }));
+app.put("/api/professor/password", async (req, res) => {
+  const data = z
+    .object({
+      currentPassword: z.string().min(1).max(200),
+      newPassword: z.string().min(8).max(200),
+    })
+    .parse(req.body);
+  const p = await professor(req);
+  if (!(await bcrypt.compare(data.currentPassword, p.passwordHash)))
+    throw new HttpError(401, "Current password is incorrect.");
+  if (data.currentPassword === data.newPassword)
+    throw new HttpError(
+      400,
+      "Choose a password that differs from the current one.",
+    );
+  await db.professor.update({
+    where: { id: p.id },
+    data: { passwordHash: await bcrypt.hash(data.newPassword, 10) },
+  });
+  res.status(204).end();
+});
+
 app.get("/api/professor/categories", async (_req, res) =>
   res.json(
     await db.category.findMany({
@@ -273,6 +295,21 @@ app.put("/api/professor/settings", async (req, res) => {
     }),
   );
 });
+// Cap the results log at the newest attempts; older rows go away with their answers.
+const MAX_ATTEMPTS = 500;
+async function pruneAttempts() {
+  const total = await db.attempt.count();
+  if (total <= MAX_ATTEMPTS) return;
+  const stale = await db.attempt.findMany({
+    orderBy: [{ startedAt: "asc" }, { id: "asc" }],
+    take: total - MAX_ATTEMPTS,
+    select: { id: true },
+  });
+  await db.attempt.deleteMany({
+    where: { id: { in: stale.map((a) => a.id) } },
+  });
+}
+
 app.post(
   "/api/student/start",
   rateLimit({ windowMs: 60000, limit: 120 }),
@@ -326,7 +363,12 @@ app.post(
         },
       });
     });
+        // Trim first, so the log never grows past the cap.
+    await pruneAttempts().catch((err) =>
+      console.error("Failed to prune old attempts:", err),
+    );
     res.status(201).json({ id: a.id, token });
+
   },
 );
 const answerInput = z.object({
@@ -575,21 +617,33 @@ app.post(
             successRows.push(rowNumber);
           }
 
-        } catch (err) {
-          failedRows.push({
-            row: rowNumber,
-            error: err instanceof Error ? err.message : "Unknown parsing error",
-          });
-        }
+              } catch (err) {
+        failedRows.push({
+          row: rowNumber,
+          error: err instanceof Error ? err.message : "Unknown parsing error",
+        });
       }
-      return res.json({
-        totalRows: worksheet.rowCount - 1,
-        successCount: successRows.length,
-        skippedCount: skippedRows.length,
-        skippedRows,
-        failedCount: failedRows.length,
-        failedRows,
+    }
+    // Drop categories that ended up with no tools, so empty ones never accumulate.
+    const emptyCategories = await db.category.findMany({
+      where: { tools: { none: {} } },
+      select: { id: true, name: true },
+    });
+    if (emptyCategories.length) {
+      await db.category.deleteMany({
+        where: { id: { in: emptyCategories.map((c) => c.id) } },
       });
+    }
+    return res.json({
+      totalRows: worksheet.rowCount - 1,
+      successCount: successRows.length,
+      skippedCount: skippedRows.length,
+      skippedRows,
+      failedCount: failedRows.length,
+      failedRows,
+      removedCategories: emptyCategories.map((c) => c.name),
+    });
+
     } catch (err) {
       next(err);
     }

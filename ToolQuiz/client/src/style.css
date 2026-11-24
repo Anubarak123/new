@@ -860,3 +860,52 @@ td {
   border-color: #a8c19a;
   box-shadow: 0 12px 28px rgba(32, 48, 45, 0.22);
 }
+/* ---------- Soft color pass: low-saturation green accents only ---------- */
+.sort-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #e4ebdf;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+.sort-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #226b50;
+  transition: width 0.2s ease;
+}
+/* A 3px spine marks cards that already sit in a category */
+.sorting-grid .tool {
+  border-left: 3px solid #6f9a78;
+  padding-left: 10px;
+}
+/* Softer drop target: thin solid border + faint shadow instead of a filled block */
+.sorting-grid .zone.over,
+.tool-rail.over {
+  background: #eef6e7;
+  border: 1px solid #8ab08c;
+  box-shadow: 0 4px 14px rgba(34, 107, 80, 0.1);
+}
+.sorting-meta {
+  justify-content: flex-end;
+}
+/* Tinted labels and a warm card surface: more color, still muted */
+.sorting-grid .zone h2 {
+  display: inline-block;
+  background: #edf4e7;
+  color: #35603a;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: 0 0 6px;
+}
+.tool-rail h2 {
+  display: inline-block;
+  background: #e6efdd;
+  border-radius: 6px;
+  padding: 3px 10px;
+  margin: 0 0 8px;
+}
+.sorting-grid .tool {
+  background: #fbfdf8;
+}
