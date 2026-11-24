@@ -257,6 +257,19 @@ function Login() {
   const nav = useNavigate();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+    useEffect(() => {
+    if (!localStorage.getItem("professor-token")) return;
+    let active = true;
+    api("/professor/session")
+      .then(() => {
+        if (active) nav("/professor", { replace: true });
+      })
+      .catch(() => localStorage.removeItem("professor-token"));
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -1087,8 +1100,12 @@ function Play() {
         </div>
       </div>
       <ErrorBox message={error} />
-      <div className="sorting-meta">
-         
+            <div className="sorting-meta">
+        {localStorage.getItem("professor-token") && (
+          <Link to="/professor" className="quiz-return">
+            ← Professor Dashboard
+          </Link>
+        )}
         <span role="status">
           {busy
             ? "Saving…"
@@ -1097,6 +1114,7 @@ function Play() {
               : "All changes saved"}
         </span>
       </div>
+
            <div className="sort-progress" aria-hidden="true">
         <span
           className="sort-progress-fill"

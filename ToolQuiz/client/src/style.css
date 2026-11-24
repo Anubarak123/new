@@ -909,3 +909,15 @@ td {
 .sorting-grid .tool {
   background: #fbfdf8;
 }
+.sorting-meta {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 14px;
+}
+.sorting-meta [role="status"] {
+  margin-left: auto;
+}
+.sorting-meta .quiz-return {
+  font-size: 12px;
+  text-decoration: none;
+}
